@@ -1,0 +1,3 @@
+# Optimality in Practice
+
+... From notes to structured sections...
