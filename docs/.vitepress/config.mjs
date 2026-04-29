@@ -5,6 +5,8 @@ import lightbox from "vitepress-plugin-lightbox"
 export default defineConfig({
   title: "Designing Data and Analytical Workflows",
   description: "A guide for implementing reproducible, maintainable, and optimal workflows in R and Python",
+  base: "/data-analytics-workflows/",
+
   themeConfig: {
     // https://vitepress.dev/reference/default-theme-config
     siteTitle: "Designing Data and<br>Analytical Workflows",
