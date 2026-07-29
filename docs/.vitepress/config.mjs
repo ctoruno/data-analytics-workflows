@@ -45,6 +45,10 @@ export default defineConfig({
         text: "Maintainability",
         items: [
           { text: "Maintainability in Practice", link: "/maintainability" },
+          { text: "Readability", link: "/readability" },
+          { text: "Modularity", link: "/modularity" },
+          { text: "Observability", link: "/observability" },
+          { text: "Idiomaticity", link: "/idiomaticity" },
         ]
       },
       {

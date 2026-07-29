@@ -197,6 +197,119 @@ Making that transition is not just about swapping file extensions. It is about a
 One of the fundamental complaints about Jupyter notebooks (the hidden state problem) is something that newer tools are beginning to address architecturally. [Marimo](https://marimo.io/) is an open-source alternative to Jupyter notebooks where every cell is part of a dependency graph. Changes in one cell automatically trigger updates in dependent cells, keeping code and outputs in sync. Because a marimo notebook is stored as a pure Python file rather than JSON, it also integrates cleanly with version control, producing readable diffs and avoiding the output-leakage problems common in Jupyter. Marimo is a relatively recent tool and I have not used it extensively, but it is the most architecturally serious attempt to fix the reproducibility problems of traditional notebooks, and it is worth watching. I would suggest reading [this blog post](https://towardsdatascience.com/why-im-making-the-switch-to-marimo-notebooks/).
 :::
 
+## The manual last mile
+ 
+The notebook trap is about output that cannot be reproduced because the execution history is hidden. There is a close cousin of that problem that shows up at the opposite end of the workflow, and it is arguably more common in research settings: output that cannot be reproduced because a human edited it after the code was done.
+ 
+In my professional life, I have heard so many terrifying stories about research assistants taking over the work of a previous RA and realizing that, even when the code works, the tables were manually edited. This lead to a nightmare in trying to discover which run or version of the code produced the number in Table No. 4 Main Results. Sometimes, to never be found.
+ 
+The setup is usually impeccable. The project has a virtual environment. Dependencies are pinned in a lockfile. The repository is clean, the scripts run top to bottom, the data is versioned. Everything we have discussed so far is in place. And then the exported LaTeX table gets opened in a text editor, a few columns get renamed, some numbers get rounded differently, a footnote gets added, and that edited file is what ends up in the paper. The pipeline is reproducible right up until the last mile, where it quietly stops being so.
+ 
+It is worth being explicit that this is not a niche concern. LaTeX remains the dominant reporting language in academic research, and for good reasons: it handles mathematical notation, cross-referencing, and bibliography management better than anything else available, and most journals in economics, statistics, and the quantitative social sciences expect it. That prominence is exactly why the manual last mile matters so much. The interface between your analytical code and your final document is, for a very large share of research output, a `.tex` file sitting in a folder, and that file is extremely easy to open and edit by hand.
+ 
+### Why the second run is the dangerous one
+ 
+The first time you hand-edit a table, nothing bad happens. You export it, you clean it up, it looks good, the draft goes out. The cost is invisible because there is nothing to compare against yet.
+ 
+The problem arrives with the second run. A reviewer asks for a robustness check. A bug is found in the cleaning script. A new wave of data comes in. You rerun the pipeline, and now you have to reapply every manual adjustment you made the first time, from memory, across however many tables the paper contains. You will miss one. Nothing will error. No test will fail. The document will compile perfectly and the paper will just be quietly wrong.
+ 
+This is the same structural failure as hidden state in a notebook. In both cases, the final output is a product of the code plus an undocumented layer of human intervention, and only the code part is recoverable.
+ 
+### "It was only formatting"
+ 
+The usual defense is that the edits were cosmetic. Sometimes that is true. Adjusting column widths, changing a font size, or fixing the placement of a rule is genuinely presentational, and if the numbers are untouched, the reproducibility cost is low.
+ 
+But the line is blurrier than it looks, and it is worth naming the cases that feel like formatting and are not:
+ 
+- **Rounding.** Changing 12.437 to 12.4 in the `.tex` file rather than in the code means the published number no longer exists anywhere in your output.
+- **Renaming variables.** `log_hh_inc` becoming "Log household income" is a labelling decision, and if it happens by hand, the mapping between the paper and the codebase lives only in your head.
+- **Reordering rows or columns.** Harmless right up until someone cross-references row three with the model specification list.
+- **Adding significance stars, notes, or sample sizes.** These are results. They belong to the estimation step, not the typesetting step.
+- **Dropping a row.** Usually done because it did not fit on the page. Almost always worth flagging in the code instead.
+The sentence "I only cleaned it up a bit" is the one that precedes most of these errors, and it is worth being suspicious of it in your own work.
+ 
+### Treat generated artifacts as read-only
+ 
+The practical rule is the same one we applied earlier to keeping a compliance copy of a codebase in SharePoint: **a generated artifact is an output, never a working copy**. The moment someone edits a table in place, you have two diverging versions, the code output and the document version, and no reliable way to reconcile them.
+ 
+The minimum viable implementation of this rule in a LaTeX workflow is the `\input{}` pattern. Your code writes each table to its own file in a dedicated folder, and the manuscript never contains generated content.
+ 
+The structure I have settled on is one script that holds nothing but table functions, with one function per table, each writing its own `.tex` file. The important part is not the file layout though. It is that every decision that would otherwise tempt you to open the `.tex` file is expressed as an argument:
+ 
+```r
+# src/tabs.R
+ 
+main_results_table <- function(fitted_models) {
+  
+  coef_map <- c("poldis" = "D/H Experience")
+  
+  extra_info <- tibble(
+    term    = c("Region FE", "Dem. Cov.", "Pol. Cov.", "Sample"),
+    `(I)`   = c("X", "",  "",  "Matched"),
+    `(II)`  = c("X", "X", "",  "Matched"),
+    `(III)` = c("X", "X", "X", "Matched"),
+    `(IV)`  = c("X", "X", "X", "Full")
+  )
+  
+  modelsummary(
+    fitted_models,
+    estimate = "{estimate}{stars}",
+    stars    = c("*" = 0.05, "**" = 0.01, "***" = 0.001),
+    gof_omit = "R2|RMSE|AIC|BIC|FE",
+    coef_map = coef_map,
+    add_rows = extra_info,
+    output   = "tex/main_results.tex"
+  )
+  
+  return(TRUE)
+}
+```
+ 
+Look at what is in there. The variable labels that turn `poldis` into something a reader understands. The significance stars and their thresholds. Which goodness-of-fit statistics get dropped. And, most importantly, `add_rows`: that block at the bottom of every results table telling you which specifications include fixed effects and which sample was used. In my experience that block is the single most hand-edited object in empirical research, because it is the one thing the modelling function does not know about. Building it as a data frame takes ten extra lines and makes it survive a rerun.
+ 
+Not every table comes out of `modelsummary`, and for the ones that do not, the pattern is the same with a manual write at the end:
+ 
+```r
+tbl <- kbl(df, booktabs = TRUE, format = "latex", digits = 3) %>%
+  kable_styling(full_width = FALSE)
+ 
+writeLines(tbl, "tex/mediation_analysis.tex")
+```
+ 
+Formatting, rounding, column alignment, and table notes are all arguments here too. The recoding of row and column labels happens on the data frame before it ever reaches `kbl()`, which keeps the naming decisions in the same place as the rest of the analysis rather than in the typesetting layer.
+ 
+The manuscript then only references the artifact:
+ 
+```latex
+\begin{table}[htbp]
+\caption{Main results}
+\label{tab:main}
+\input{tex/main_results.tex}
+\end{table}
+```
+ 
+Anything about the table that needs to change now has to change in the code, because the file is regenerated on every run and any manual edit is destroyed the next time the pipeline executes. That destructiveness is the feature. It removes the option of editing by hand, which is a much stronger guarantee than the intention not to.
+ 
+The natural extension of this is the dynamic document, where the code and the prose live in the same file and the report is rendered rather than assembled. Quarto and R Markdown do this well, and if your setup allows it, it closes the gap entirely. But it is not always an option, and the `\input{}` pattern gets you most of the traceability benefit without requiring anyone else on the project to change how they write.
+ 
+It looks like extra work the first time. It stops looking like extra work the first time a data update changes every number in the paper and you only have to recompile.
+ 
+On the R side, I have worked with a combination of `kableExtra`, `modelsummary`, and `flextable`, and between the three of them I have not run into a customized research table I could not reproduce programmatically in LaTeX. `modelsummary` handles regression output, `kableExtra` covers general LaTeX table styling, and `flextable` is the one I reach for when the destination is Word rather than a `.tex` file.
+ 
+I have very little experience doing this in Python, so take the following as a pointer rather than a recommendation. `great_tables` is the closest analogue to the modern R table packages, `stargazer` and `pystout` are commonly used for regression output aimed at LaTeX, and pandas' own `Styler.to_latex()` covers simpler cases without adding a dependency. If your reporting stack is Word rather than LaTeX, `python-docx` is the usual answer.
+ 
+### An honest position
+ 
+I should be upfront about where I land here, because there is a purist position and a pragmatic one and I do not think the pragmatic one is indefensible.
+ 
+I lean purist. My instinct is that everything in the final document should be generated by code, with no exceptions, and that any manual step is a reproducibility debt you will eventually pay with interest. That is the standard I try to hold myself to.
+ 
+But I have also done it the other way. I have opened a `.tex` file and fixed something by hand because the deadline was that afternoon and figuring out the right `kableExtra` argument was going to cost me two hours. Being honest about the outcome: the times I regret doing it are almost as many as the times I consider it was a good decision to save time. That is not a ringing endorsement of either position. It is close to a coin flip, which is exactly why I think the default should be the automated path, since the coin only gets flipped when you decide the automated path is not worth it.
+ 
+So rather than a blanket prohibition, the principle I would actually defend is this: **the goal is not zero manual intervention, it is that manual intervention should never be invisible.** If you genuinely need to adjust something by hand, do it in a scripted post-processing step, or record it somewhere that survives a rerun. The version that is unacceptable is the edit that exists only in someone's memory, because that is the one that turns into a former colleague's table that nobody can reproduce.
+ 
+One last note on where this connects. The reason hand-editing is tempting is usually that the table-generating code is not well factored, so customizing it feels harder than customizing the output. A well-parameterized table function is the actual fix, which is a modularity concern and something we will come back to in the Maintainability section. And the whole calculus changes once rerunning the pipeline is cheap, which is a matter of orchestration and belongs in the Optimality section. Traceability is where the problem shows up. It is not always where the solution lives.
+
 ## Other traceability tools
 
 ### Python: MLflow

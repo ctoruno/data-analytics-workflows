@@ -4,7 +4,7 @@
 
 Every reproducible R workflow starts the same way: a version-controlled project with an isolated package environment. Getting both of these in place from the very beginning is much easier than retrofitting them later, and both Positron and RStudio make it straightforward.
 
-Before walking through the steps for each IDE, there is one recommendation worth making upfront: **always package your R code**. I will talk more about this in the [**INSERT CROSS-REFERENCE HERE**] of this guide.
+Before walking through the steps for each IDE, there is one recommendation worth making upfront: **always package your R code**. I will talk more about this in the [modularity section](./modularity.md#package-your-code) of this guide.
 
 This might sound like overkill for a one-off analysis, but the structure that comes with an R package (a clean `DESCRIPTION` file, a defined namespace, a place for documentation and tests) pays off quickly as a project grows. The tradeoffs are minimal, and the habits it builds are good ones. The only naming constraint to be aware of is that R package names may only contain letters, numbers, and periods; they must start with a letter; and they cannot end in a period. No hyphens, no underscores.
 
