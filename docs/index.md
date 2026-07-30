@@ -29,3 +29,10 @@ features:
     link: /optimality
 ---
 
+## License
+
+<small>
+The text and images of this guide are licensed under <a href="https://creativecommons.org/licenses/by-nc/4.0/" target="_blank" rel="noopener noreferrer">CC BY-NC 4.0</a>: you may share and adapt them for non-commercial purposes, with credit to the author and a link back to this site. The code samples and the site's source are licensed under the <a href="https://github.com/ctoruno/data-analytics-workflows/blob/master/LICENSE-CODE" target="_blank" rel="noopener noreferrer">MIT License</a>. For commercial use, such as paid training or published work, please <a href="https://www.linkedin.com/in/carlostoruno/" target="_blank" rel="noopener noreferrer">get in touch</a> to arrange a separate license.
+<br><br>
+© 2026 <a href="https://www.carlos-toruno.com/" target="_blank" rel="noopener noreferrer">Carlos A. Toruño P.</a>
+</small>
