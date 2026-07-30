@@ -1,7 +1,3 @@
 # Maintainability in Practice
 
 A maintainable workflow is one that ages well. Code gets read far more times than it gets written, and a workflow that cannot be understood, extended, or debugged without heroic effort is a liability, no matter how correct its outputs were on the day it was finished. But maintainability is not about following conventions for their own sake. It is about respecting the time and the cognitive load of every person who will touch the code after it is first written, including yourself six months from now. In practice, it comes down to four things: code whose intent is clear on first reading, logic decomposed into discrete and single-purpose units, workflows that let you see what they are doing without cracking them open, and code that feels native to the language it is written in. These map onto the four sub-principles discussed in this section: readability, modularity, observability, and idiomaticity. They reinforce each other more than they stand alone. Modular code tends to be readable, readable code is easier to modularize, and idiomatic code is easier for anyone else in the ecosystem to do either with.
-
-<!-- In R, this might mean embracing vectorization and the [tidyverse grammar](https://tidyverse.org/) where appropriate -> Remember [Air](https://tidyverse.org/blog/2025/02/air/)
-
-Idiomaticity -> I have seen people writting code in Python, trying to force the dogmas from R into it and vice versa -->

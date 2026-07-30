@@ -56,6 +56,12 @@ export default defineConfig({
         items: [
           { text: "Optimality in Practice", link: "/optimality" },
         ]
+      },
+      {
+        text: "Checklist",
+        items: [
+          { text: "A guide more than a strict checklist", link: "/checklist" },
+        ]
       }
     ],
 

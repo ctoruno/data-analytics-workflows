@@ -10,6 +10,12 @@ The last section deliberately left out the question of how long a function shoul
 
 The test I actually use is a naming test. **If you cannot name the function without using "and", it is doing too much.** `clean_and_merge_survey()` is a confession. So is `load_process_and_export()`. The name is telling you where the seam is, and the fix is usually to cut along it.
 
+It is worth noting that the advice on this point is not unanimous. The mainstream recommendation for research computing, stated in Wilson et al.'s widely cited ["Good Enough Practices in Scientific Computing"](https://doi.org/10.1371/journal.pcbi.1005510), is to decompose programs into functions of no more than about sixty lines, roughly a page. That is a defensible rule and a good default for someone with no other guidance.
+
+John Ousterhout, in [*A Philosophy of Software Design*](https://web.stanford.edu/~ouster/cgi-bin/aposd2ndEdExtract.pdf), argues close to the opposite. His unit of analysis is the module, which can be a function, a class, or a file, and his claim is that modules should be deep: a simple interface concealing a substantial implementation. The failure he warns against is the shallow module, whose interface is nearly as complicated as the thing it hides, so that the abstraction earns almost nothing while still costing the reader something to learn. He gives the habit of chopping everything into many small units a name, classitis, and argues it raises the total complexity of a system rather than lowering it, because each new interface is one more thing everyone has to hold in their head.
+
+I find myself closer to Ousterhout, but the disagreement is a useful one to sit with rather than resolve by decree. A sixty-line function that does one job cleanly is fine. Six ten-line functions that only make sense when read together are worse, even though every one of them passes the line count.
+
 This matters more in analytical work than in most software, because of how our functions come into existence. Nobody sits down to write `clean_and_merge_survey()`. What happens is that you write a script, the script works, you wrap it in a function so you can run it on next year's data, and the function inherits every step the script happened to contain. The origin story is the problem. A script is a sequence, a function is a unit, and wrapping the first in a signature preserves the sequence while calling it a unit. This is language-independent: an R script that grows a `function()` around it and a Python script that grows a `def` around it fail in exactly the same way.
 
 ## Interfaces: parameterize the decisions
@@ -58,7 +64,13 @@ Here is where I want to argue with the conventional advice, including the versio
 
 "Don't repeat yourself" is one of the first rules anybody learns, and taken literally it says that the moment you see the same lines twice, you should factor them into a function. In analytical work I think that is actively bad advice, and the reason is that the two failure modes are not symmetric.
 
-Duplicated code is a visible problem with a cheap fix. You can see all the copies, you can read each one in isolation, and when you finally understand what they have in common you can factor them out with confidence. The wrong abstraction is an invisible problem with an expensive fix. Somebody wrote a function that unified two things that were only superficially similar, and every subsequent difference between those two things got handled by adding a parameter. Now the function has six boolean flags, three of its arguments only apply in some cases, and nobody can change it without checking every call site. Sandi Metz put it best: duplication is far cheaper than the wrong abstraction.
+Duplicated code is a visible problem with a cheap fix. You can see all the copies, you can read each one in isolation, and when you finally understand what they have in common you can factor them out with confidence. The wrong abstraction is an invisible problem with an expensive fix. Somebody wrote a function that unified two things that were only superficially similar, and every subsequent difference between those two things got handled by adding a parameter. Now the function has six boolean flags, three of its arguments only apply in some cases, and nobody can change it without checking every call site. [Sandi Metz](https://sandimetz.com/blog/2016/1/20/the-wrong-abstraction) gave this its canonical formulation in a talk that provoked enough reaction that she later wrote it up as an essay:
+
+> prefer duplication over the wrong abstraction
+
+Her account of how projects get there is worth reading in full, because the mechanism is recognizable. Someone extracts a shared abstraction. Time passes. A new requirement arrives for which the abstraction is almost right, and the next person, feeling obliged to preserve it, adds a parameter and a conditional. Then another. The code ends up as a condition-laden procedure holding several loosely related ideas together, and every new feature makes the next one harder.
+
+The trap she identifies is the sunk cost fallacy. Existing code argues for its own necessity simply by existing, and the more incomprehensible it has become, the more effort it evidently took, and the more reluctant everyone is to throw it away. Her prescription is the part people usually miss: when an abstraction has gone wrong, inline it back into every caller, strip each copy down to what that caller actually needs, and let the duplication show you what the right abstraction would have been. Going backwards is the fast route forwards.
 
 The practical resolution is the one you have probably heard: **when you have written the same code three times, write a function.** The number is not magic, but the logic behind it is sound. One occurrence is a thing. Two occurrences might be a coincidence, and you still do not know which parts are essential and which are incidental. Three occurrences give you actual evidence about what the shared logic is, because you have seen it vary. You are abstracting from data rather than from a guess about the future.
 
@@ -175,6 +187,8 @@ Classes carry state, and state is the thing that makes code hard to reason about
 
 Two failure modes worth naming. The first is the class that holds no state and has one method, which is a function wearing a costume, and the `__init__` plus method call is pure ceremony. The second is inheritance depth: one level of abstraction is usually clarifying, and three levels usually means finding where a method actually comes from requires reading four files. Composition, where an object holds another object rather than inheriting from it, ages better than deep hierarchies in almost every case I have run into.
 
+<iframe width="100%" height="315" src="https://www.youtube.com/embed/o9pEzgHorH0" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+
 The rule of thumb I would offer: **use a function when the data is the thing that persists, and a class when the process is.** A cleaning step is a function. A connection, a fitted model, or a family of ingestion routines that must stay in step with each other is usually a class.
 
 ### And in R
@@ -229,6 +243,14 @@ There is an R-specific constraint here that was flagged in the [readability sect
 This is the recommendation made back in the [R workflow section](./r_reproducible_workflow.md), deferred until now, and this is the section where it gets its actual justification. **Package your code.** In R specifically, but the Python equivalent of writing your project as an installable module with a `src/` layout is the same recommendation wearing different clothes.
  
 The argument made earlier was mostly about dependency management and namespacing, which are reproducibility concerns. The modularity argument is stronger, and it is this: everything in this section is a discipline, and a package converts it into a structure. Single-purpose units, declared interfaces, logic separated from execution, dependencies flowing one way. You can achieve every one of those with a folder of scripts and enough willpower. A package means you no longer need the willpower, because the loader enforces what you would otherwise have to remember.
+
+This is not an idiosyncratic position. [Marwick, Boettiger and Mullen](https://faculty.washington.edu/bmarwick/PDFs/Marwick-Boettiger-Mullen-2018-TAS-research-compendia.pdf) made the same case, arguing that the R package is a natural template for what they call a research compendium: a standard, recognizable way of organizing a project's files so that someone else can inspect, reproduce, and extend the work. Their argument for it is partly that you stop having to invent a layout at all, since the package gives you
+
+> conventions that save you time thinking about the best way to organize your project
+
+Their three defining principles for a compendium will sound familiar by now, because this guide has arrived at them from other directions: organize files according to the conventions of your community, keep a clear separation between data, method, and output while making the relationships between them explicit, and specify the computational environment the analysis ran in. They treat raw data as read-only and outputs as disposable, on the reasoning that anything the code produced can be produced again.
+
+Two things about their paper are worth flagging. The first is that they are explicit that the principles generalize beyond R, and that researchers working in other languages can take the structure without the tooling. The second is that they do not recommend CRAN for compendia, since its directory rules and size limits fit software rather than research projects, which is a nice illustration of the point that the package structure is useful here for organizational reasons rather than distribution ones. Their [rrtools](https://github.com/benmarwick/rrtools) package scaffolds a compendium if you want a concrete starting point.
  
 Concretely, here is what stops being your problem.
  

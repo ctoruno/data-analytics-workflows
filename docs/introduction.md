@@ -10,7 +10,17 @@ For the purposes of this guide, a **data and analytical workflow** is any projec
 - **An analytical output**: visualizations, reports, statistical analyses, or research tables that communicate findings derived from data.
 - **A statistical or machine learning model**: any formalized procedure that learns from data to make predictions, classifications, or inferences.
 
-This deliberately excludes work that lives primarily in the data infrastructure layer: SQL pipelines, data warehouse transformations, or orchestration platforms like Airflow or Databricks. That work is equally important and has its own craft, conventions, and literature. However, those fall outside the scope of this guide.
+This deliberately excludes work that lives primarily in the data infrastructure
+layer: building SQL pipelines and warehouse transformations, or standing up and
+operating orchestration platforms like Airflow or Databricks. That work is
+equally important and has its own craft, conventions, and literature.
+
+The line I am drawing is about ownership rather than tooling. Analysts read from
+warehouses, query Parquet with DuckDB, orchestrate their own project pipelines,
+and occasionally send a job to a cluster. This guide will talk about all of that,
+but always from the analyst's side of the boundary: how to consume that layer
+well, and how to recognise the moment a problem has stopped being yours. What it
+will not do is teach you how to build or run that layer.
 
 But defining the output is only half of it. The "workflow" part is equally important. A workflow is the full chain of steps, from raw data to final deliverables, including how data is acquired, processed, analyzed, and shared. In their [Reproducible Research Fundamentals](https://courses.wbginstitute.org/course/reproducible-research-fundamentals-new-edition), the World Bank makes an observation that resonates deeply: code is most often thought of as just a means to an end. A tool you use to get the answer, and then discard. This framing is reinforced by the fact that writing good code is rarely taught in most statistics, economics, or data science programs. You pick it up as you go, optimizing for "it works" rather than "someone else can read and run this." But it's not just the code. It's the decisions, the structure, the documentation, and the practices that make that chain coherent and repeatable. In that sense, your code is not a disposable byproduct of your analysis, it is an output in its own right, and it deserves to be treated as one.
 
